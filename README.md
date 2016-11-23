@@ -62,6 +62,6 @@ This will make `Fail2ban` monitor the file `/var/log/nginx/challenged.log` and e
 
 Bad clients will automatically be banned (presented with a Google reCAPTCHA challenge) at Cloudflare instead of continuously hitting your server. After the defined `bantime` clients are automatically removed from the blacklist again.
 
-It might be a good idea to whitelist the IP range of Cloudflare in `Fail2ban` using the `ignoreip` section. A current list of the IP ranges of Cloudflare can be found here: https://www.cloudflare.com/ips
+It might be a good idea to whitelist the IP range of Cloudflare in `Fail2ban` using the `ignoreip` section. A current list of the IP ranges of Cloudflare can be found here: https://www.cloudflare.com/ips/
 
 NOTE: At the moment `Fail2ban` doesn't work with IPv6 so it might be a good idea to disable IPv6 support in the Cloudflare admin interface for each site you want to protect using Fail2ban.
