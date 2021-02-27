@@ -8,6 +8,9 @@ API_ENDPOINT = 'https://api.cloudflare.com/client/v4/user/firewall/access_rules/
 CLOUDFLARE_USERNAME     = 'YOUR_CLOUDFLARE_USERNAME_GOES_HERE'.freeze
 CLOUDFLARE_API_KEY      = 'YOUR_API_KEY_GOES_HERE'.freeze
 
+# Store banned IP'send_request
+BANNED_TXT = 'cb_ban.txt'.freeze
+
 # Timeout settings
 HTTP_READ_TIMEOUT = 10
 
@@ -55,31 +58,45 @@ end
 def ban_ip(ip)
   # Construct our payload
   data = {}
-  data[:mode] = 'challenge'
+  data[:mode] = 'block'
   data[:configuration] = {}
   data[:configuration][:target] = 'ip'
   data[:configuration][:value] = ip
   data[:notes] = 'Added by Fail2Ban'
 
   # Perform the POST
-  send_request(API_ENDPOINT, data.to_json, 'POST')
+  response = send_request(API_ENDPOINT, data.to_json, 'POST')
+  ban_id = JSON.parse(response.body)['result']['id']
+  
+  # Store the new banned IP on cf_ban.txt
+  File.open(BANNED_TXT, "a") { |f| f.write "#{ip}:#{ban_id}\n" }
 end
 
 def unban_ip(id)
   # Construct our payload
-  url = "#{API_ENDPOINT}/#{id}"
+  data = {}
+  # Encode URL
+  url = URI.encode("#{API_ENDPOINT}/#{id}")
+  url.gsub!(/%0A/, "")
   # Perform the DELETE
-  send_request(url, nil, 'DELETE')
+  send_request(url, data.to_json, 'DELETE')
 end
 
 ban_ip(ip) if command == 'ban'
 
 if command == 'unban'
-  # Ban the IP again to obtain the ID of the record we want to delete
-  # This is a tradeoff between storing the ID's locally vs. fetching from
-  # CloudFlare
-  ban_result = ban_ip(ip)
-  result_hash = JSON.parse(ban_result.body)
-  id = result_hash['result']['id']
-  unban_ip(id)
+  # Get token ID of the banned IP from cf_ban.txt
+    File.open(BANNED_TXT, "r+") do |f|
+    f.each_line do |line|
+    if line =~ /#{ip}/
+        key,value = line.split(":")
+        # Send token ID to CloudFlare API.
+        unban_ip(value)
+        # Remove banned IP from cf_ban.txt
+        f.seek(-line.length, IO::SEEK_CUR)
+        f.write(' ' * (line.length - 1))
+    end
+    end
+    f.close
+    end
 end
