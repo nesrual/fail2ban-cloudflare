@@ -1,0 +1,22 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby: ['3.0', '3.1', '3.2', '3.3', 'head']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+      - name: Syntax check
+        run: ruby -c cloudflare_api_manager.rb
+      - name: Run tests
+        run: ruby test/cloudflare_api_manager_test.rb
